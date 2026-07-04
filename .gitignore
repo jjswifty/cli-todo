@@ -1,0 +1,6 @@
+# Binaries
+cli-todo
+*.exe
+.DS_Store
+.idea/
+todos.json
