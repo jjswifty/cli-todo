@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -9,14 +10,49 @@ import (
 	"time"
 )
 
-type todo struct {
-	CreatedAt time.Time `json:"created_at"`
-	Completed bool      `json:"completed"`
-	Text      string    `json:"text"`
+type todoDTO struct {
+	CreatedAt *string `json:"createdAt"`
+	Completed *bool   `json:"completed"`
+	Text      *string `json:"text"`
+}
+
+type todosFileDTO struct {
+	Todos []todoDTO `json:"todos"`
 }
 
 type todosFile struct {
 	Todos []todo `json:"todos"`
+}
+
+type todo struct {
+	CreatedAt string `json:"createdAt"`
+	Completed bool   `json:"completed"`
+	Text      string `json:"text"`
+}
+
+func (data todoDTO) validate() error {
+	if data.Text == nil {
+		return errors.New("missing field `text`")
+	}
+
+	if data.CreatedAt == nil {
+		return errors.New("missing field `createdAt`")
+	}
+
+	if data.Completed == nil {
+		return errors.New("missing field `completed`")
+	}
+
+	return nil
+}
+
+func (data todoDTO) toDomain() todo {
+	return todo{
+		// это хоть и указатели, но они указаывают на исходную строку. копировать строку нет смысла, она immutable
+		CreatedAt: *data.CreatedAt,
+		Text:      *data.Text,
+		Completed: *data.Completed,
+	}
 }
 
 func main() {
@@ -87,10 +123,13 @@ func main() {
 			os.Exit(1)
 		}
 
-		var data todosFile
+		fmt.Println(string(fileContent), "filecontent")
+
+		var rawData todosFileDTO
+
 		// создаем go struct из json:
 
-		err = json.Unmarshal(fileContent, &data)
+		err = json.Unmarshal(fileContent, &rawData)
 
 		if err != nil {
 			fmt.Printf("Не удалось конвертировать JSON в структуру. Возможно, JSON поврежден. Err: %v", err)
@@ -98,11 +137,25 @@ func main() {
 			os.Exit(1)
 		}
 
-		data.Todos = append(data.Todos, createdTodo)
+		fmt.Println("After unmarashal", rawData)
 
-		fmt.Printf("%+v", data)
+		var currentTodos []todo
 
-		constructedJson, err := json.Marshal(data)
+		for i, dto := range rawData.Todos {
+			if err := dto.validate(); err != nil {
+
+				fmt.Printf("Error in field todos[%d]: %v. Raw value: %+v", i, err, dto)
+				os.Exit(1)
+			}
+
+			currentTodos = append(currentTodos, dto.toDomain())
+		}
+
+		currentTodos = append(currentTodos, createdTodo)
+
+		fmt.Printf("%+v", currentTodos)
+
+		constructedJson, err := json.Marshal(todosFile{Todos: currentTodos})
 
 		if err != nil {
 			fmt.Printf("Ошибка создания JSON: %v", err)
@@ -125,7 +178,7 @@ func createTodoFromText(text string) todo {
 	return todo{
 		Text:      text,
 		Completed: false,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().String(),
 	}
 }
 
