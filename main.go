@@ -10,33 +10,91 @@ import (
 	"time"
 )
 
+type todosFileDTO struct {
+	NextId *int      `json:"nextId"`
+	Todos  []todoDTO `json:"todos"`
+}
 type todoDTO struct {
+	Id        *int    `json:"id"`
 	CreatedAt *string `json:"createdAt"`
 	Completed *bool   `json:"completed"`
 	Text      *string `json:"text"`
 }
 
-type todosFileDTO struct {
-	Todos []todoDTO `json:"todos"`
-}
-
 type todosFile struct {
-	Todos []todo `json:"todos"`
+	NextId int    `json:"nextId"`
+	Todos  []todo `json:"todos"`
 }
 
 type todo struct {
+	ID        int    `json:"id"`
 	CreatedAt string `json:"createdAt"`
 	Completed bool   `json:"completed"`
 	Text      string `json:"text"`
 }
 
+func (data todosFileDTO) validate() error {
+	if data.NextId == nil {
+		return errors.New("missing field `nextId`")
+	}
+
+	if *data.NextId < 0 {
+		return errors.New("field nextId must be positive or 0")
+	}
+
+	// todos может и не быть, нельзя сразу распаковывать
+	if data.Todos == nil {
+		return errors.New("missing field `todos`")
+	}
+
+	var ids []int
+
+	maxId := 0
+
+	for i, dto := range data.Todos {
+		if err := dto.validate(); err != nil {
+			return fmt.Errorf("todo at index %d is invalid: %w", i, err)
+		}
+
+		id := *dto.Id
+
+		if id > maxId {
+			maxId = *dto.Id
+		}
+
+		if slices.Contains(ids, id) {
+			return fmt.Errorf("todo at index %d is invalid: duplicate ID", i)
+		}
+
+		ids = append(ids, id)
+	}
+
+	if maxId >= *data.NextId {
+		return fmt.Errorf("todo with id %d is invalid: todo id cannot be bigger than nextId(%d)", maxId, *data.NextId)
+	}
+
+	return nil
+}
+
 func (data todoDTO) validate() error {
+	if data.Id == nil {
+		return errors.New("missing field `id`")
+	}
+
+	if *data.Id < 0 {
+		return errors.New("field `id` must be positive or 0")
+	}
+
 	if data.Text == nil {
 		return errors.New("missing field `text`")
 	}
 
 	if data.CreatedAt == nil {
 		return errors.New("missing field `createdAt`")
+	}
+
+	if *data.CreatedAt == "" {
+		return errors.New("field `createdAt` cannot be empty")
 	}
 
 	if data.Completed == nil {
@@ -46,9 +104,22 @@ func (data todoDTO) validate() error {
 	return nil
 }
 
+func (data todosFileDTO) toDomain() todosFile {
+	var domainedTodos []todo
+
+	for _, v := range data.Todos {
+		domainedTodos = append(domainedTodos, v.toDomain())
+	}
+
+	return todosFile{
+		NextId: *data.NextId,
+		Todos:  domainedTodos,
+	}
+}
+
 func (data todoDTO) toDomain() todo {
 	return todo{
-		// это хоть и указатели, но они указаывают на исходную строку. копировать строку нет смысла, она immutable
+		// это хоть и указатели, но они указывают на исходную строку. Копировать строку нет смысла, она immutable
 		CreatedAt: *data.CreatedAt,
 		Text:      *data.Text,
 		Completed: *data.Completed,
@@ -82,12 +153,10 @@ func main() {
 	switch command {
 	case "add":
 
-		createdTodo := createTodoFromText(argument)
-
 		/**
 		Сначала мы должны проверить существует ли мас
 		получаем джсон из файла -> превр. в обычный объект ->
-		1 (?). файл оказался пустым, создаем объект сами
+		1 (?). Файл оказался пустым, создаем объект сами
 		2. добавляем в этот объект нашу туду -> превращаем в джсон -> записываем файл заново
 		*/
 
@@ -95,9 +164,12 @@ func main() {
 
 		if err != nil {
 			// файла не существует, сразу создадим жсон и закинем внутрь
+
+			createdTodo := createTodoFromText(argument, 0)
+
 			createFileAndTodos(createdTodo)
 
-			os.Exit(1)
+			os.Exit(0)
 		}
 
 		/**
@@ -118,12 +190,12 @@ func main() {
 				os.Exit(1)
 			}
 
+			createdTodo := createTodoFromText(argument, 0)
+
 			createFileAndTodos(createdTodo)
 
-			os.Exit(1)
+			os.Exit(0)
 		}
-
-		fmt.Println(string(fileContent), "filecontent")
 
 		var rawData todosFileDTO
 
@@ -137,48 +209,44 @@ func main() {
 			os.Exit(1)
 		}
 
-		fmt.Println("After unmarashal", rawData)
+		err = rawData.validate()
 
-		var currentTodos []todo
-
-		for i, dto := range rawData.Todos {
-			if err := dto.validate(); err != nil {
-
-				fmt.Printf("Error in field todos[%d]: %v. Raw value: %+v", i, err, dto)
-				os.Exit(1)
-			}
-
-			currentTodos = append(currentTodos, dto.toDomain())
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 
-		currentTodos = append(currentTodos, createdTodo)
+		todosJsonFile := rawData.toDomain()
 
-		fmt.Printf("%+v", currentTodos)
+		createdTodo := createTodoFromText(argument, todosJsonFile.NextId)
 
-		constructedJson, err := json.Marshal(todosFile{Todos: currentTodos})
+		todosJsonFile.Todos = append(todosJsonFile.Todos, createdTodo)
+		todosJsonFile.NextId++
+
+		constructedJson, err := json.Marshal(todosJsonFile)
 
 		if err != nil {
 			fmt.Printf("Ошибка создания JSON: %v", err)
-			os.Exit(0)
+			os.Exit(1)
 		}
-
-		fmt.Print(string(constructedJson))
 
 		if err := os.WriteFile("todos.json", constructedJson, 0777); err != nil {
 			fmt.Print("Error while file creating, probably security:", err)
-			os.Exit(0)
+			os.Exit(1)
 		}
 
+		fmt.Printf("Задача \"%s\" успешно добавлена.", createdTodo.Text)
 	default:
 		panic("NO SUCH COMMAND WE GONNA DIIIE, lol")
 	}
 }
 
-func createTodoFromText(text string) todo {
+func createTodoFromText(text string, id int) todo {
 	return todo{
 		Text:      text,
 		Completed: false,
 		CreatedAt: time.Now().String(),
+		ID:        id,
 	}
 }
 
@@ -186,7 +254,8 @@ func createFileAndTodos(todoObj todo) {
 	var todos []todo
 
 	todosObject := todosFile{
-		Todos: append(todos, todoObj),
+		NextId: todoObj.ID + 1,
+		Todos:  append(todos, todoObj),
 	}
 
 	constructedJson, err := json.Marshal(todosObject)
