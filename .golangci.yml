@@ -1,0 +1,26 @@
+version: "2"
+
+run:
+  timeout: 30s
+
+linters:
+  default: standard
+  enable:
+    - exhaustruct
+    - revive
+    - errorlint
+    - misspell
+
+  settings:
+    exhaustruct:
+      allow-empty-returns: true
+      allow-empty-declarations: true
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
