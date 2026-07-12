@@ -1,0 +1,29 @@
+{
+  "nextId": 4,
+  "todos": [
+    {
+      "id": 0,
+      "createdAt": "2026-07-08T23:31:15+02:00",
+      "completed": false,
+      "text": "make dinner"
+    },
+    {
+      "id": 1,
+      "createdAt": "2026-07-09T19:16:36+02:00",
+      "completed": false,
+      "text": "make dinner"
+    },
+    {
+      "id": 2,
+      "createdAt": "2026-07-09T19:16:46+02:00",
+      "completed": false,
+      "text": "make dinner asd"
+    },
+    {
+      "id": 3,
+      "createdAt": "2026-07-09T19:16:52+02:00",
+      "completed": false,
+      "text": "make dinner asd as"
+    }
+  ]
+}

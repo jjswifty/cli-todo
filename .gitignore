@@ -3,4 +3,7 @@ cli-todo
 *.exe
 .DS_Store
 .idea/
+
+# project-files
 todos.json
+cover.out

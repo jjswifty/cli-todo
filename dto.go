@@ -1,12 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"slices"
-	"time"
 )
 
 type todosFileDTO struct {
@@ -18,18 +14,6 @@ type todoDTO struct {
 	CreatedAt *string `json:"createdAt"`
 	Completed *bool   `json:"completed"`
 	Text      *string `json:"text"`
-}
-
-type todoList struct {
-	NextID int
-	Todos  []todo
-}
-
-type todo struct {
-	ID        int
-	CreatedAt string
-	Completed bool
-	Text      string
 }
 
 func (data todosFileDTO) validate() error {
@@ -50,8 +34,7 @@ func (data todosFileDTO) validate() error {
 		return nil
 	}
 
-	// todo: переписать на мапу, так как здесь сейчас o(n^2)
-	var ids []int
+	idsMap := make(map[int]bool, len(data.Todos))
 
 	maxID := 0
 
@@ -66,15 +49,15 @@ func (data todosFileDTO) validate() error {
 			maxID = *dto.ID
 		}
 
-		if slices.Contains(ids, id) {
+		if idsMap[id] {
 			return fmt.Errorf("todo at index %d is invalid: duplicate ID", i)
 		}
 
-		ids = append(ids, id)
+		idsMap[id] = true
 	}
 
 	if maxID >= *data.NextID {
-		return fmt.Errorf("todo with id %d is invalid: todo id cannot be bigger than nextId(%d)", maxID, *data.NextID)
+		return fmt.Errorf("todo with id %d is invalid: todo id cannot be bigger or equal than nextId(%d)", maxID, *data.NextID)
 	}
 
 	return nil
@@ -108,6 +91,8 @@ func (data todoDTO) validate() error {
 	return nil
 }
 
+// Конвертирует DTO в доменную модель.
+// Предусловие: DTO должен пройти validate() — поля разыменовываются без проверок.
 func (data todosFileDTO) toDomain() todoList {
 	var domainedTodos []todo
 
@@ -121,6 +106,8 @@ func (data todosFileDTO) toDomain() todoList {
 	}
 }
 
+// Конвертирует DTO в доменную модель.
+// Предусловие: DTO должен пройти validate() — поля разыменовываются без проверок.
 func (data todoDTO) toDomain() todo {
 	return todo{
 		// это хоть и указатели, но они указывают на исходную строку. Копировать строку нет смысла, она immutable
@@ -150,62 +137,5 @@ func (list todoList) toDTO() todosFileDTO {
 	return todosFileDTO{
 		NextID: &list.NextID,
 		Todos:  dtos,
-	}
-}
-
-func loadTodos() (todoList, error) {
-	fileContent, err := os.ReadFile("todos.json")
-
-	if errors.Is(err, os.ErrNotExist) {
-		// файла нет — начинаем с чистого листа, это не ошибка
-		return todoList{}, nil
-	}
-
-	if err != nil {
-		return todoList{}, fmt.Errorf("failed to read todos.json: %w", err)
-	}
-
-	if len(fileContent) == 0 {
-		return todoList{}, errors.New("todos.json существует, но пустой — удалите его или восстановите содержимое")
-	}
-
-	var rawData todosFileDTO
-
-	// создаем go struct из json:
-	err = json.Unmarshal(fileContent, &rawData)
-
-	if err != nil {
-		return todoList{}, fmt.Errorf("не удалось конвертировать JSON в структуру. Возможно, JSON поврежден. Err: %w", err)
-	}
-
-	err = rawData.validate()
-
-	if err != nil {
-		return todoList{}, fmt.Errorf("invalid todos file: %w", err)
-	}
-
-	return rawData.toDomain(), nil
-}
-
-func saveTodos(list todoList) error {
-	constructedJSON, err := json.Marshal(list.toDTO())
-
-	if err != nil {
-		return fmt.Errorf("ошибка создания JSON: %w", err)
-	}
-
-	if err := os.WriteFile("todos.json", constructedJSON, 0777); err != nil {
-		return fmt.Errorf("error while file creating, probably security: %w", err)
-	}
-
-	return nil
-}
-
-func newTodoFromText(text string, id int) todo {
-	return todo{
-		Text:      text,
-		Completed: false,
-		CreatedAt: time.Now().Format(time.RFC3339),
-		ID:        id,
 	}
 }

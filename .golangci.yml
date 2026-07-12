@@ -13,6 +13,7 @@ linters:
 
   settings:
     exhaustruct:
+      allow-empty: true
       allow-empty-returns: true
       allow-empty-declarations: true
 

@@ -19,6 +19,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	argument := strings.TrimSpace(strings.Join(args[1:], " "))
+
+	if argument == "" {
+		fmt.Println("Todo text cannot be empty.")
+		os.Exit(1)
+	}
+
 	command := args[0]
 
 	if !slices.Contains(allowedCommands[:], command) {
@@ -31,11 +38,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	argument := strings.Join(args[1:], " ")
-
 	switch command {
 	case "add":
-		loadedTodos, err := loadTodos()
+		pathToTodos := "todos.json"
+
+		loadedTodos, err := loadTodos(pathToTodos)
 
 		if err != nil {
 			fmt.Println(err)
@@ -48,7 +55,7 @@ func main() {
 		loadedTodos.Todos = append(loadedTodos.Todos, createdTodo)
 		loadedTodos.NextID++
 
-		err = saveTodos(loadedTodos)
+		err = saveTodos(loadedTodos, pathToTodos)
 
 		if err != nil {
 			fmt.Println(err.Error())

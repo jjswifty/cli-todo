@@ -1,0 +1,12 @@
+pre-commit:
+  commands:
+    fmt:
+      priority: 1
+      run: make fmt
+      stage_fixed: true
+    lint:
+      priority: 2
+      run: make lint
+    test:
+      priority: 3
+      run: make test

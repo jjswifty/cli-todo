@@ -1,0 +1,49 @@
+# .github/workflows/ci.yml
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+
+      - name: Run tests
+        run: go test -coverprofile=cover.out ./...
+
+      - name: Generate coverage summary
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo '### 📊 Coverage'
+            echo '```'
+            go tool cover -func=cover.out
+            echo '```'
+          } > coverage.md
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: coverage.md
