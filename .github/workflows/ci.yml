@@ -12,9 +12,9 @@ permissions:
   pull-requests: write
 
 jobs:
-  test:
+  checks:
+    name: Lint & Test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
