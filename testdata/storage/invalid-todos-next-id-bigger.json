@@ -1,0 +1,11 @@
+{
+  "nextId": 4,
+  "todos": [
+    {
+      "id": 5,
+      "createdAt": "2026-07-08T23:31:15+02:00",
+      "completed": false,
+      "text": "make dinner"
+    }
+  ]
+}
