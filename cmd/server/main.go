@@ -37,7 +37,7 @@ var nextTodoID = 1
 func main() {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", handleRoot)
+	mux.HandleFunc("/{$}", handleRoot)
 	mux.HandleFunc("GET /todos", handleGetTodos)
 	mux.HandleFunc("GET /todos/{id}", handleGetTodoByID)
 	mux.HandleFunc("POST /todos", handleCreateTodo)
@@ -119,6 +119,10 @@ func handleGetTodos(w http.ResponseWriter, _ *http.Request) {
 	cacheMutex.RLock()
 	todos := slices.Collect(maps.Values(todoCache))
 	cacheMutex.RUnlock()
+
+	if todos == nil {
+		todos = []Todo{}
+	}
 
 	slices.SortFunc(todos, func(a, b Todo) int {
 		return cmp.Compare(a.ID, b.ID)
@@ -241,7 +245,7 @@ func handlePatchTodoByID(w http.ResponseWriter, r *http.Request) {
 	cacheMutex.Unlock()
 
 	if !ok {
-		http.Error(w, "user not found", http.StatusNotFound)
+		http.Error(w, "todo not found", http.StatusNotFound)
 
 		return
 	}
