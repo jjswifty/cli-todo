@@ -19,10 +19,10 @@ func TestLoadTodos(t *testing.T) {
 			want: todoList{
 				NextID: 4,
 				Todos: []todo{
-					{ID: 0, CreatedAt: "2026-07-08T23:31:15+02:00", Completed: false, Text: "make dinner"},
-					{ID: 1, CreatedAt: "2026-07-09T19:16:36+02:00", Completed: false, Text: "make dinner"},
-					{ID: 2, CreatedAt: "2026-07-09T19:16:46+02:00", Completed: false, Text: "make dinner asd"},
-					{ID: 3, CreatedAt: "2026-07-09T19:16:52+02:00", Completed: false, Text: "make dinner asd as"},
+					{ID: 0, CreatedAt: mustParseTime(t, "2026-07-08T23:31:15+02:00"), Completed: false, Text: "make dinner"},
+					{ID: 1, CreatedAt: mustParseTime(t, "2026-07-09T19:16:36+02:00"), Completed: false, Text: "make dinner"},
+					{ID: 2, CreatedAt: mustParseTime(t, "2026-07-09T19:16:46+02:00"), Completed: false, Text: "make dinner asd"},
+					{ID: 3, CreatedAt: mustParseTime(t, "2026-07-09T19:16:52+02:00"), Completed: false, Text: "make dinner asd as"},
 				},
 			},
 			wantErr: "",
@@ -86,7 +86,7 @@ func TestSaveTodos_RoundTrip(t *testing.T) {
 	original := todoList{
 		NextID: 1,
 		Todos: []todo{
-			{ID: 0, CreatedAt: "2026-07-08T23:31:15+02:00", Completed: false, Text: "make dinner"},
+			{ID: 0, CreatedAt: mustParseTime(t, "2026-07-08T23:31:15+02:00"), Completed: false, Text: "make dinner"},
 		},
 	}
 

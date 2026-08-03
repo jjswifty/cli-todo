@@ -13,7 +13,7 @@ lint-fix:
 	golangci-lint run --fix
 
 test:
-	go test ./...
+	go test ./... -v
 
 cover:
 	go test -coverprofile=cover.out ./...

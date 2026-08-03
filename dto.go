@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 type todosFileDTO struct {
@@ -84,6 +85,10 @@ func (data todoDTO) validate() error {
 		return errors.New("field `createdAt` cannot be empty")
 	}
 
+	if _, err := time.Parse(time.RFC3339, *data.CreatedAt); err != nil {
+		return fmt.Errorf("field `createdAt` must be a valid RFC 3339 date: %w", err)
+	}
+
 	if data.Completed == nil {
 		return errors.New("missing field `completed`")
 	}
@@ -109,10 +114,12 @@ func (data todosFileDTO) toDomain() todoList {
 // Конвертирует DTO в доменную модель.
 // Предусловие: DTO должен пройти validate() — поля разыменовываются без проверок.
 func (data todoDTO) toDomain() todo {
+	createdAt, _ := time.Parse(time.RFC3339, *data.CreatedAt) // формат гарантирован validate()
+
 	return todo{
 		// это хоть и указатели, но они указывают на исходную строку. Копировать строку нет смысла, она immutable
 		ID:        *data.ID,
-		CreatedAt: *data.CreatedAt,
+		CreatedAt: createdAt,
 		Text:      *data.Text,
 		Completed: *data.Completed,
 	}
@@ -121,7 +128,7 @@ func (data todoDTO) toDomain() todo {
 func (t todo) toDTO() todoDTO {
 	return todoDTO{
 		ID:        &t.ID,
-		CreatedAt: &t.CreatedAt,
+		CreatedAt: new(t.CreatedAt.Format(time.RFC3339)),
 		Completed: &t.Completed,
 		Text:      &t.Text,
 	}

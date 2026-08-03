@@ -11,7 +11,7 @@ type todoList struct {
 
 type todo struct {
 	ID        int
-	CreatedAt string
+	CreatedAt time.Time
 	Completed bool
 	Text      string
 }
@@ -20,7 +20,7 @@ func newTodoFromText(text string, id int) todo {
 	return todo{
 		Text:      text,
 		Completed: false,
-		CreatedAt: time.Now().Format(time.RFC3339),
+		CreatedAt: time.Now(),
 		ID:        id,
 	}
 }

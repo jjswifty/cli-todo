@@ -2,70 +2,55 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"slices"
-	"strings"
 
 	"github.com/fatih/color"
 )
 
+const pathToTodos = "todos.json"
+
 func main() {
-	allowedCommands := [1]string{"add"}
 
-	args := os.Args[1:]
-	if len(args) == 0 {
-		fmt.Println("No command was specified; terminating program.")
+	rawArgs := os.Args[1:]
+
+	var mainError error
+
+	cmd, err := parseArgs(rawArgs)
+
+	if err != nil {
+		color.Red(err.Error())
 		os.Exit(1)
 	}
 
-	argument := strings.TrimSpace(strings.Join(args[1:], " "))
+	switch c := cmd.(type) {
+	case addCommand:
+		mainError = runAdd(pathToTodos, c.text)
 
-	if argument == "" {
-		fmt.Println("Todo text cannot be empty.")
-		os.Exit(1)
-	}
-
-	command := args[0]
-
-	if !slices.Contains(allowedCommands[:], command) {
-		fmt.Println("Unknown command. Allowed commands:", allowedCommands)
-		os.Exit(1)
-	}
-
-	if len(args) == 1 {
-		fmt.Printf("No argument was provided for command: \"%s\", terminating... \n", args[0])
-		os.Exit(1)
-	}
-
-	switch command {
-	case "add":
-		pathToTodos := "todos.json"
-
-		loadedTodos, err := loadTodos(pathToTodos)
-
-		if err != nil {
-			fmt.Println(err)
-
-			os.Exit(1)
-		}
-
-		createdTodo := newTodoFromText(argument, loadedTodos.NextID)
-
-		loadedTodos.Todos = append(loadedTodos.Todos, createdTodo)
-		loadedTodos.NextID++
-
-		err = saveTodos(loadedTodos, pathToTodos)
-
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-
-		color.Green("Задача \"%s\" успешно добавлена.", createdTodo.Text)
-
-		os.Exit(0)
+	case listAllCommand:
+		mainError = runList(pathToTodos)
+	case listOneCommand:
+		mainError = runListByID(pathToTodos, c.id)
+	case doneCommand:
+		mainError = runDone(pathToTodos, c.id)
+	case undoneCommand:
+		mainError = runUndone(pathToTodos, c.id)
+	case deleteCommand:
+		mainError = runDelete(pathToTodos, c.id)
 	default:
-		panic("NO SUCH COMMAND WE GONNA DIIIE, lol")
+		mainError = fmt.Errorf("unknown command")
 	}
+
+	if mainError != nil {
+		if errors.Is(mainError, errNoTodos) {
+			color.Yellow("У вас еще нет задач. Добавьте с помощью команды `add`.")
+		} else {
+			color.Red(mainError.Error())
+		}
+
+		os.Exit(1)
+	}
+
+	os.Exit(0)
 }

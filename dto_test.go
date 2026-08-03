@@ -74,6 +74,11 @@ func TestTodoDTO_Validate(t *testing.T) {
 			wantErr: "field `createdAt` cannot be empty",
 		},
 		{
+			name:    "createdAt has wrong format",
+			input:   makeTodoDTO(func(dto *todoDTO) { dto.CreatedAt = new("2026-13-45T99:00:00Z ") }),
+			wantErr: "field `createdAt` must be a valid RFC 3339 date",
+		},
+		{
 			name:    "missing completed",
 			input:   makeTodoDTO(func(dto *todoDTO) { dto.Completed = nil }),
 			wantErr: "missing field `completed`",
@@ -182,7 +187,7 @@ func TestTodoList_RoundTrip(t *testing.T) {
 		Todos: []todo{
 			{
 				ID:        0,
-				CreatedAt: "2026-07-09T19:16:36+02:00",
+				CreatedAt: mustParseTime(t, "2026-07-09T19:16:36+02:00"),
 				Completed: false,
 				Text:      "testing",
 			},
