@@ -5,5 +5,5 @@ cli-todo
 .idea/
 
 # project-files
-todos.json
+cmd/cli/todos.json
 cover.out
